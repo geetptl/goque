@@ -31,8 +31,11 @@ func init() {
 	readCmd.PersistentFlags().StringVarP(&newContext.topic, "topic", "t", "", "Topic name to read from")
 	readCmd.PersistentFlags().IntVarP(&newContext.numberOfMessages, "number", "n", 0, "Number of messages to read from a topic")
 
+	rmCmd.PersistentFlags().StringVarP(&newContext.topic, "topic", "t", "", "Topic name to remove")
+
 	rootCmd.AddCommand(addCmd)
 	rootCmd.AddCommand(readCmd)
+	rootCmd.AddCommand(rmCmd)
 }
 
 func Execute() error {

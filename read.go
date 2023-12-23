@@ -8,6 +8,8 @@ import (
 
 func readFunc(command *cobra.Command, args []string) error {
 	fmt.Println(newContext)
+	topic, lines, err := getTopic(newContext, true)
+	fmt.Println(topic, lines, err)
 	return nil
 }
 

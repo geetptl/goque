@@ -11,13 +11,23 @@ The name comes from Go and Queue, and is a pronounced like [Goku](https://en.wik
 
 I'll be adding here once I have some actual material, tests. Until then, use `go build -o bin/goque` to create a binary, and `.bin/goque --help` should help you out.
 
+Currently, to use the system, you'll need an the following file structure present:
+
+```
+$HOME/.goque/
+├── data/
+└── index
+```
+
+`data` is an empty directory, and `index` is an empty file.
+
 ## Code structure
 
 I have tried to follow [`qrcp`](https://github.com/claudiodangelis/qrcp)'s code template, but in a simplified manner, without subpackages and such. I have been a big fan of `qrcp` over time.
 
 At the end, it uses [`cobra`](https://cobra.dev/) to manage the cli.
 
-To connect with the filesystem, I am planning to use [`io/fs`](https://pkg.go.dev/io/fs), but the final decision remains to be made.
+To connect with the filesystem, I am using [`os`](https://pkg.go.dev/os).
 
 Feel free to point out the flaws, or something that you feel isn't idiomatic to Go.
 

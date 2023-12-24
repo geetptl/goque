@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"errors"
-	"fmt"
 	"os"
 	"path"
 	"strconv"
@@ -89,14 +88,45 @@ func removeTopic(topic string) error {
 	for scanner.Scan() {
 		line := scanner.Text()
 		slices := strings.Split(line, " ")
-		fmt.Println(slices)
 		if slices[0] != topic {
 			buffer += line + "\n"
 		}
 	}
-	fmt.Printf(buffer)
+	indexFile.Close()
 
 	indexFile_W, err := os.OpenFile(INDEX_PATH, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
+	defer indexFile_W.Close()
+	if err != nil {
+		return err
+	}
+
+	_, err = indexFile_W.WriteString(buffer)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func updateIndex(topic string, linesRead int) error {
+	indexFile, err := os.OpenFile(INDEX_PATH, os.O_RDONLY, os.ModeAppend)
+	if err != nil {
+		return err
+	}
+	scanner := bufio.NewScanner(indexFile)
+	buffer := ""
+	for scanner.Scan() {
+		line := scanner.Text()
+		slices := strings.Split(line, " ")
+		if slices[0] != topic {
+			buffer += line + "\n"
+		}
+	}
+	indexFile.Close()
+	buffer += topic + " " + strconv.Itoa(linesRead) + "\n"
+
+	indexFile_W, err := os.OpenFile(INDEX_PATH, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
+	defer indexFile_W.Close()
 	if err != nil {
 		return err
 	}

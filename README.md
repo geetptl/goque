@@ -13,9 +13,17 @@ I'll be adding here once I have some actual material, tests. Until then, use `go
 Available Commands:
 
 ```
-  add         Add a message to a topic
-  read        Read messages from a topic
-  remove      Remove a topic
+add         Add a message to a topic
+read        Read messages from a topic
+remove      Remove a topic
+```
+
+Usage:
+
+```
+goque add --topic topicName --msg messageContent // OR goque a -t topic -m msg
+goque read --topic topicName --number numberOfMessages // OR goque r -t topic -n number
+goque remove --topic topicName // OR goque rm -t topic
 ```
 
 Use `./bin/goque add --help` for more details on `add`, and so on.

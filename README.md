@@ -4,14 +4,23 @@
 
 There is no purpose to this project, and is an academic excursion to learn how to build cli applications in Go. Although if you are interested, contributions are most welcome.
 
-The name comes from Go and Queue, and is a pronounced like [Goku](https://en.wikipedia.org/wiki/Goku). 
-<!-- I am not a weeb though, and this is a poor pun at best. -->
+The name comes from Go and Queue, and is a pun on [Goku](https://en.wikipedia.org/wiki/Goku).
 
 ## Usage
 
-I'll be adding here once I have some actual material, tests. Until then, use `go build -o bin/goque` to create a binary, and `.bin/goque --help` should help you out.
+I'll be adding here once I have some actual material, tests. Until then, use `go build -o bin/goque` to create a binary.
 
-Currently, to use this, you'll need the following file structure present:
+Available Commands:
+
+```
+  add         Add a message to a topic
+  read        Read messages from a topic
+  remove      Remove a topic
+```
+
+Use `./bin/goque add --help` for more details on `add`, and so on.
+
+Currently, to use this, you'll need a linux system, and the following file structure present on your filesystem:
 
 ```bash
 $HOME/.goque/
@@ -31,6 +40,9 @@ To connect with the filesystem, I am using [`os`](https://pkg.go.dev/os) package
 
 Feel free to point out the flaws, or something that you feel isn't idiomatic to Go.
 
-## Contributions
+## Next Steps
 
-I have no idea what to write here.
+1. A refactoring of filesystem operations to make them abstract
+1. A deeper look at how Kafka manages it's logs, and if the hassle to manage indexes in an in-memory structure with asynchronous writes worth it
+1. A trash-compactor implementation for maintenance, which removes all the messages that are already read
+1. A clean up to provide configured for data directory and easy-install

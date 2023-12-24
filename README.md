@@ -51,6 +51,6 @@ Feel free to point out the flaws, or something that you feel isn't idiomatic to 
 ## Next Steps
 
 1. A refactoring of filesystem operations to make them abstract
-1. A deeper look at how Kafka manages it's logs, and if the hassle to manage indexes in an in-memory structure with asynchronous writes worth it
+1. Make this system concurrency-safe
 1. A trash-compactor implementation for maintenance, which removes all the messages that are already read
-1. A clean up to provide configured for data directory and easy-install
+1. A clean up to provide configured for data directory and easy-install scripts

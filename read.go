@@ -9,7 +9,14 @@ import (
 func readFunc(command *cobra.Command, args []string) error {
 	fmt.Println(newContext)
 	topic, lines, err := getTopic(newContext, false)
-	fmt.Println(topic, lines, err)
+	fmt.Println("read", topic, lines, err)
+	if err != nil {
+		return err
+	}
+
+	if topic == "" {
+		return nil
+	}
 	return nil
 }
 

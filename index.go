@@ -33,7 +33,6 @@ func getTopic(context context, create bool) (string, int, error) {
 	for scanner.Scan() {
 		line := scanner.Text()
 		slices := strings.Split(line, " ")
-		fmt.Println(slices)
 		if slices[0] == context.topic {
 			topicExists = true
 			topicLinesRead, err = strconv.Atoi(slices[1])
@@ -71,10 +70,41 @@ func getTopic(context context, create bool) (string, int, error) {
 		if err != nil {
 			return "", -1, err
 		}
+		indexFile_W.Close()
 
 		return context.topic, 0, nil
 	} else {
 		// didn't ask to create, and couldn't find
 		return "", -1, nil
 	}
+}
+
+func removeTopic(topic string) error {
+	indexFile, err := os.OpenFile(INDEX_PATH, os.O_RDONLY, os.ModeAppend)
+	if err != nil {
+		return err
+	}
+	scanner := bufio.NewScanner(indexFile)
+	buffer := ""
+	for scanner.Scan() {
+		line := scanner.Text()
+		slices := strings.Split(line, " ")
+		fmt.Println(slices)
+		if slices[0] != topic {
+			buffer += line + "\n"
+		}
+	}
+	fmt.Printf(buffer)
+
+	indexFile_W, err := os.OpenFile(INDEX_PATH, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
+	if err != nil {
+		return err
+	}
+
+	_, err = indexFile_W.WriteString(buffer)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

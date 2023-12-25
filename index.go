@@ -3,138 +3,182 @@ package main
 import (
 	"bufio"
 	"errors"
+	"log"
 	"os"
 	"path"
 	"strconv"
-	"strings"
 )
 
-// Returns: path relative to DATADIR, linesRead, error
-// Not returning file descriptors,
-// because we need them with different permissions every now and then
-func getTopic(context context, create bool) (string, int, error) {
-	// create indexFile if not found, keep in READONLY mode
-	indexFile, err := os.OpenFile(INDEX_PATH, os.O_RDONLY, 0644)
-	if errors.Is(err, os.ErrNotExist) {
-		indexFile, err = os.Create(INDEX_PATH)
-		if err != nil {
-			return "", -1, err
+/*
+The new plan:
+No index file.
+To list all topics, just list all the directories in DATADIR
+DATADIR/topic should contain two files: index & log
+*/
+
+/*
+if topic is found, return (topic, nil)
+if not found and create is true, create directory and return (topic, nil)
+if not found and create is false, return ("", nil)
+if any error, return ("", err)
+*/
+func getTopic(topic string, create bool) (string, error) {
+	// check for topic dir. check for subfiles. if anything is missing, throw error.
+	topicStat, err := os.Stat(path.Join(DATADIR_PATH, topic))
+	log.Println(topicStat, err)
+	if err != nil {
+		if os.IsNotExist(err) {
+			if create {
+				return createTopic(topic)
+			} else {
+				return "", nil
+			}
 		}
-		indexFile, _ = os.OpenFile(INDEX_PATH, os.O_RDONLY, 0644)
-	} else if err != nil {
-		return "", -1, err
+		return "", err
+	}
+	if !topicStat.IsDir() {
+		return "", errors.New("Malformed topic directory")
 	}
 
-	// create values for topicExists and topicReadCount based on indexFile
-	scanner := bufio.NewScanner(indexFile)
-	topicExists := false
-	topicLinesRead := -1
+	// topic is good, check subfiles.
+	indexStat, err := os.Stat(path.Join(DATADIR_PATH, topic, "index"))
+	log.Println(indexStat, err)
+	if err != nil {
+		return "", err
+	}
+	if indexStat.IsDir() {
+		return "", errors.New(topic + "/index is a directory")
+	}
+
+	logStat, err := os.Stat(path.Join(DATADIR_PATH, topic, "log"))
+	log.Println(logStat, err)
+	if err != nil {
+		return "", err
+	}
+	if logStat.IsDir() {
+		return "", errors.New(topic + "/log is a directory")
+	}
+
+	// all good here, I guess
+	return topic, nil
+}
+
+func createTopic(topic string) (string, error) {
+	err := os.Mkdir(path.Join(DATADIR_PATH, topic), os.ModePerm)
+	log.Println(err)
+	if err != nil {
+		return "", err
+	}
+
+	indexFile_W, err := os.OpenFile(path.Join(DATADIR_PATH, topic, "index"), os.O_CREATE|os.O_WRONLY, os.ModePerm)
+	log.Println(err)
+	if err != nil {
+		return "", err
+	}
+	defer indexFile_W.Close()
+	_, err = indexFile_W.WriteString("0")
+	if err != nil {
+		return "", err
+	}
+
+	logFile_W, err := os.OpenFile(path.Join(DATADIR_PATH, topic, "log"), os.O_CREATE|os.O_WRONLY, os.ModePerm)
+	log.Println(err)
+	if err != nil {
+		return "", err
+	}
+	defer logFile_W.Close()
+
+	return topic, nil
+}
+
+/*
+read from topic/log, and update topic/index.
+*/
+func readFromTopic(topic string, number int) ([]string, error) {
+	if number < 0 {
+		return nil, errors.New("number < 0 not allowed")
+	}
+
+	indexFile, err := os.OpenFile(path.Join(DATADIR_PATH, topic, "index"), os.O_RDONLY, os.ModePerm)
+	log.Println(err)
+	if err != nil {
+		return nil, err
+	}
+	defer indexFile.Close()
+	indexbuf := [64]byte{}
+	n, err := indexFile.Read(indexbuf[:])
+	log.Println(err)
+	if err != nil {
+		return nil, err
+	}
+	lineStart, err := strconv.Atoi(string(indexbuf[0:n]))
+	log.Println(err)
+	if err != nil {
+		return nil, err
+	}
+
+	logFile, err := os.OpenFile(path.Join(DATADIR_PATH, topic, "log"), os.O_RDONLY, os.ModePerm)
+	log.Println(err)
+	if err != nil {
+		return nil, err
+	}
+	defer logFile.Close()
+
+	messages := []string{}
+	scanner := bufio.NewScanner(logFile)
+	linesScanned := 0
+	linesRead := 0
+	log.Println(lineStart)
 	for scanner.Scan() {
-		line := scanner.Text()
-		slices := strings.Split(line, " ")
-		if slices[0] == context.topic {
-			topicExists = true
-			topicLinesRead, err = strconv.Atoi(slices[1])
-			if err != nil {
-				return "", -1, err
+		if linesScanned < lineStart {
+			linesScanned++
+		} else {
+			if linesScanned < n+lineStart {
+				messages = append(messages, scanner.Text())
+				linesScanned++
+				linesRead++
+			} else {
+				break
 			}
 		}
 	}
 
-	// work with indexFile is done here.
-	// Only thing is to append if creating a datafile,
-	// for which we'll need a O_APPEND|O_WRONLY file descriptor anyways,
-	// so no harm in closing this file descriptor here.
-	indexFile.Close()
-
-	// if: topic exists, then check for the data file. It must exist, call it consistancy.
-	// else:
-	//     if: create flag is true, then create the data file, otherwise just go home
-	if topicExists {
-		dataFile, err := os.OpenFile(path.Join(DATADIR_PATH, context.topic), os.O_RDONLY, 0644)
-		if err != nil {
-			return "", -1, err
-		}
-		dataFile.Close()
-		return context.topic, topicLinesRead, nil
-	} else if create {
-		dataFile, err := os.Create(path.Join(DATADIR_PATH, context.topic))
-		if err != nil {
-			return "", -1, err
-		}
-		dataFile.Close()
-
-		indexFile_W, _ := os.OpenFile(INDEX_PATH, os.O_APPEND|os.O_WRONLY, os.ModeAppend)
-		_, err = indexFile_W.WriteString(context.topic + " 0\n")
-		if err != nil {
-			return "", -1, err
-		}
-		indexFile_W.Close()
-
-		return context.topic, 0, nil
-	} else {
-		// didn't ask to create, and couldn't find
-		return "", -1, nil
+	indexFile_W, err := os.OpenFile(path.Join(DATADIR_PATH, topic, "index"), os.O_WRONLY|os.O_TRUNC|os.O_CREATE, os.ModePerm)
+	log.Println(err)
+	if err != nil {
+		return nil, err
 	}
+	_, err = indexFile_W.WriteString(strconv.Itoa(lineStart + linesRead))
+	if err != nil {
+		return nil, err
+	}
+	return messages, nil
 }
 
-func removeTopic(topic string) error {
-	indexFile, err := os.OpenFile(INDEX_PATH, os.O_RDONLY, os.ModeAppend)
+/* append message to topic/log */
+func addMessageInTopic(topic string, message string) error {
+	logFile_W, err := os.OpenFile(path.Join(DATADIR_PATH, topic, "log"), os.O_APPEND|os.O_WRONLY, os.ModeAppend)
+	log.Println(err)
 	if err != nil {
 		return err
 	}
-	scanner := bufio.NewScanner(indexFile)
-	buffer := ""
-	for scanner.Scan() {
-		line := scanner.Text()
-		slices := strings.Split(line, " ")
-		if slices[0] != topic {
-			buffer += line + "\n"
-		}
-	}
-	indexFile.Close()
+	defer logFile_W.Close()
 
-	indexFile_W, err := os.OpenFile(INDEX_PATH, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
-	defer indexFile_W.Close()
+	n, err := logFile_W.WriteString(message + "\n")
+	log.Println(err)
+	log.Println(strconv.Itoa(n) + " bytes written")
 	if err != nil {
 		return err
 	}
-
-	_, err = indexFile_W.WriteString(buffer)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
-func updateIndex(topic string, linesRead int) error {
-	indexFile, err := os.OpenFile(INDEX_PATH, os.O_RDONLY, os.ModeAppend)
+/* remove topic directory */
+func removeTopic(topic string) error {
+	err := os.RemoveAll(path.Join(DATADIR_PATH, topic))
+	log.Println(err)
 	if err != nil {
 		return err
 	}
-	scanner := bufio.NewScanner(indexFile)
-	buffer := ""
-	for scanner.Scan() {
-		line := scanner.Text()
-		slices := strings.Split(line, " ")
-		if slices[0] != topic {
-			buffer += line + "\n"
-		}
-	}
-	indexFile.Close()
-	buffer += topic + " " + strconv.Itoa(linesRead) + "\n"
-
-	indexFile_W, err := os.OpenFile(INDEX_PATH, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0666)
-	defer indexFile_W.Close()
-	if err != nil {
-		return err
-	}
-
-	_, err = indexFile_W.WriteString(buffer)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }

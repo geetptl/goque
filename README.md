@@ -19,9 +19,9 @@ remove      Remove a topic
 Usage:
 
 ```
-goque add --topic topicName --msg messageContent // OR goque a -t topic -m msg
-goque read --topic topicName --number numberOfMessages // OR goque r -t topic -n number
-goque remove --topic topicName // OR goque rm -t topic
+./bin/goque add -t topic -m msg
+./bin/goque read -t topic -n number
+./bin/goque remove -t topic
 ```
 
 Use `./bin/goque add --help` for more details on `add`, and so on.
@@ -30,11 +30,10 @@ Currently, to use this, you'll need a linux system, and the following file struc
 
 ```bash
 $HOME/.goque/
-├── data/
-└── index
+└── data/
 ```
 
-`data` is an empty directory, and `index` is an empty file.
+`data` is an empty directory. For each topic, a subdirectory pertaining to that topic is created inside data. Each topic directory contains two files, `index` and `log`. `log` file is where incoming messages are appended, and `index` file takes care of sequential reads.
 
 ## Code structure
 
@@ -48,7 +47,6 @@ Feel free to point out the flaws, or something that you feel isn't idiomatic to 
 
 ## Next Steps
 
-1. A refactoring of filesystem operations to make them abstract
 1. Make this system concurrency-safe
 1. A trash-compactor implementation for maintenance, which removes all the messages that are already read
 1. A clean up to provide configured for data directory and easy-install scripts

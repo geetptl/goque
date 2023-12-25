@@ -1,41 +1,12 @@
 package main
 
 import (
-	"fmt"
-	"os"
-	"path"
+	"log"
 
 	"github.com/spf13/cobra"
 )
 
-func rmFunc(command *cobra.Command, args []string) error {
-	fmt.Println(newContext)
-	topic, lines, err := getTopic(newContext, false)
-	fmt.Println("rm", topic, lines, err)
-	if err != nil {
-		return err
-	}
-
-	if topic == "" {
-		return nil
-	}
-	return removeFileAndEntry(topic)
-}
-
-func removeFileAndEntry(topic string) error {
-	fmt.Println("removing " + topic)
-	err := removeTopic(topic)
-	if err != nil {
-		return err
-	}
-
-	err = os.Remove(path.Join(DATADIR_PATH, topic))
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
+var removeCommand removeCommand_
 
 var rmCmd = &cobra.Command{
 	Use:     "remove",
@@ -45,4 +16,25 @@ var rmCmd = &cobra.Command{
 	Example: "goque remove --topic topicName\nOR\ngoque rm -t topic",
 	Args:    cobra.MinimumNArgs(0),
 	RunE:    rmFunc,
+}
+
+func init() {
+	removeCommand = RemoveCommand()
+	rmCmd.PersistentFlags().StringVarP(&removeCommand.topic, "topic", "t", "", "Topic name to remove")
+	rootCmd.AddCommand(rmCmd)
+}
+
+func rmFunc(command *cobra.Command, args []string) error {
+	log.Println(removeCommand)
+	topic, err := getTopic(removeCommand.topic, false)
+	log.Println(topic, err)
+	if err != nil {
+		return err
+	}
+
+	if topic == "" {
+		return nil
+	}
+
+	return removeTopic(topic)
 }

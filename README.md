@@ -4,8 +4,6 @@
 
 There is no purpose to this project, and is an academic excursion to learn how to build cli applications in Go. Although if you are interested, contributions are most welcome.
 
-The name comes from Go and Queue, and is a pun on [Goku](https://en.wikipedia.org/wiki/Goku).
-
 ## Usage
 
 I'll be adding here once I have some actual material, tests. Until then, use `go build -o bin/goque` to create a binary.
